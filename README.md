@@ -1,10 +1,70 @@
 # AI Invoice Processor
 
-An AI-powered invoice processing API built with **FastAPI, Amazon Bedrock, PostgreSQL, and Docker Compose**. The application accepts PDF invoices, extracts their text, uses an Amazon Bedrock model to identify invoice information, validates the extracted data, detects potential duplicates, and stores invoice records for human review.
+An API that turns invoice PDFs into validated, reviewable records with FastAPI, Amazon Bedrock, PostgreSQL, and Docker Compose.
 
-This project demonstrates backend API development, AI integration, database persistence, automated testing, containerization, infrastructure as code, and CI/CD practices.
+## Problem & Solution
 
-## Features
+- **Problem:** Manual invoice entry is repetitive and makes missed fields and duplicate submissions hard to catch.
+- **Approach:** The service extracts invoice data from PDFs, validates it, detects likely duplicates, and flags records for review.
+- **Outcome:** Reviewers get a consistent API workflow to correct, approve, or reject invoice records.
+
+## Screenshots
+
+<table>
+  <tr>
+    <td align="center" valign="top">
+      <img src="docs/screenshots/api-documentation.png" alt="API Documentation" width="420">
+      <br><sub>API Documentation</sub>
+    </td>
+    <td align="center" valign="top">
+      <img src="docs/screenshots/invoice-list.png" alt="Invoice List" width="420">
+      <br><sub>Invoice List</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" valign="top">
+      <img src="docs/screenshots/invoice-list-details.png" alt="Approved Invoice Details" width="420">
+      <br><sub>Approved Invoice Details</sub>
+    </td>
+    <td align="center" valign="top">
+      <img src="docs/screenshots/duplicate-detection.png" alt="Duplicate Detection" width="420">
+      <br><sub>Duplicate Detection</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" valign="top">
+      <img src="docs/screenshots/human-review-workflow.png" alt="Human Review Workflow" width="420">
+      <br><sub>Human Review Workflow</sub>
+    </td>
+    <td align="center" valign="top">
+      <img src="docs/screenshots/github-actions-passing.png" alt="GitHub Actions CI" width="420">
+      <br><sub>GitHub Actions CI</sub>
+    </td>
+  </tr>
+</table>
+
+## Architecture Diagram
+
+![AI Invoice Processor Architecture](docs/screenshots/ai-invoice-processor-architecture.png)
+
+### Architecture Notes
+
+The application follows this processing workflow:
+
+1. A client uploads a PDF invoice through the FastAPI endpoint.
+2. The API validates the uploaded file.
+3. `pypdf` extracts the invoice text.
+4. Amazon Bedrock processes the extracted text and returns structured invoice information.
+5. The application validates the extracted information and checks for potential duplicates.
+6. SQLAlchemy stores the invoice record in PostgreSQL.
+7. The invoice can be retrieved and reviewed through the API.
+8. An authorized user can approve or reject the invoice through the review endpoint.
+
+
+## Project Details
+
+### Features
+
 
 - **PDF invoice upload:** Accepts PDF files through a REST API.
 - **PDF validation:** Checks file type, PDF content, and file size before processing. Maximum upload size is 10 MB.
@@ -25,24 +85,9 @@ This project demonstrates backend API development, AI integration, database pers
 - **Database migrations:** Uses Alembic to manage database schema changes.
 - **Continuous integration:** GitHub Actions runs the automated tests and validates the Terraform configuration.
 
-### Architecture Diagram
-
-![AI Invoice Processor Architecture](docs/screenshots/ai-invoice-processor-architecture.png)
-
-## Architecture
-
-The application follows this processing workflow:
-
-1. A client uploads a PDF invoice through the FastAPI endpoint.
-2. The API validates the uploaded file.
-3. `pypdf` extracts the invoice text.
-4. Amazon Bedrock processes the extracted text and returns structured invoice information.
-5. The application validates the extracted information and checks for potential duplicates.
-6. SQLAlchemy stores the invoice record in PostgreSQL.
-7. The invoice can be retrieved and reviewed through the API.
-8. An authorized user can approve or reject the invoice through the review endpoint.
 
 ### Technology stack
+
 
 | Component | Technology |
 |---|---|
@@ -60,51 +105,8 @@ The application follows this processing workflow:
 | Infrastructure as code | Terraform |
 | CI/CD | GitHub Actions |
 
-## Application Screenshots
+### API Endpoints
 
-### API documentation
-
-
-FastAPI interactive documentation showing the available API endpoints.
-
-### Invoice list
-
-
-Example of invoice records retrieved through the API.
-
-### Approved invoice details
-
-
-Example of an invoice record with its extracted information and approval status.
-
-### Duplicate detection
-
-
-Example of duplicate invoice detection and review handling.
-
-### Human review workflow
-
-
-Example of the invoice review and approval workflow.
-
-### GitHub Actions CI
-
-
-Successful GitHub Actions workflow run.
-
-![API Documentation](docs/screenshots/api-documentation.png)
-
-![Invoice List](docs/screenshots/invoice-list.png)
-
-![Approved Invoice Details](docs/screenshots/invoice-list-details.png)
-
-![Duplicate Detection](docs/screenshots/duplicate-detection.png)
-
-![Human Review Workflow](docs/screenshots/human-review-workflow.png)
-
-![GitHub Actions CI](docs/screenshots/github-actions-passing.png)
-
-## API Endpoints
 
 | Method | Endpoint | Description |
 |---|---|---|
@@ -118,16 +120,18 @@ Successful GitHub Actions workflow run.
 
 All `/invoices` routes require an `X-API-Key` header. `/health` remains public. The invoice list accepts `offset` and `limit` (maximum 100). Valid corrections return the invoice to `pending_review`.
 
-### Interactive API documentation
+#### Interactive API documentation
 
 When the application is running, open:
 
 - Swagger UI: `http://localhost:8001/docs`
 - ReDoc: `http://localhost:8001/redoc`
 
-## Local Development
 
-### Requirements
+### Local Development
+
+
+#### Requirements
 
 - Python 3.12
 - PostgreSQL
@@ -135,27 +139,27 @@ When the application is running, open:
 - AWS account with access to Amazon Bedrock
 - AWS credentials configured locally for Bedrock access
 
-### Clone the repository
+#### Clone the repository
 
 ```bash
 git clone https://github.com/umararshad0/ai-invoice-processor.git
 cd ai-invoice-processor
 ```
 
-### Create and activate a virtual environment
+#### Create and activate a virtual environment
 
 ```bash
 python3 -m venv venv
 source venv/bin/activate
 ```
 
-### Install dependencies
+#### Install dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### Configure environment variables
+#### Configure environment variables
 
 Create your local environment configuration using the project's example configuration:
 
@@ -165,13 +169,13 @@ cp .env.example .env
 
 Set a long random `API_KEY` (for example, generate one with `openssl rand -hex 32`) and update the database and AWS settings. Keep real credentials and secrets out of Git. Invoice PDFs can contain sensitive financial and personal data; use synthetic samples for demos and define a retention and deletion policy before processing real invoices.
 
-### Run database migrations
+#### Run database migrations
 
 ```bash
 alembic upgrade head
 ```
 
-### Start the application
+#### Start the application
 
 ```bash
 uvicorn app.main:app --reload
@@ -179,7 +183,9 @@ uvicorn app.main:app --reload
 
 The API is available at the address printed by Uvicorn. The Docker Compose setup described below uses port `8001` on the host.
 
-## Docker Compose
+
+### Docker Compose
+
 
 Docker Compose runs the FastAPI application and PostgreSQL database as separate services.
 
@@ -225,7 +231,9 @@ docker compose down
 
 To remove the Compose volumes as well, use `docker compose down -v`. This deletes the persisted database data.
 
-## Database Migrations
+
+### Database Migrations
+
 
 Alembic manages database schema changes.
 
@@ -241,7 +249,9 @@ Check whether the SQLAlchemy models and migration history are synchronized:
 alembic check
 ```
 
-## Testing
+
+### Testing
+
 
 The automated tests use pytest, an isolated in-memory SQLite database, and mocked external dependencies.
 
@@ -255,7 +265,9 @@ The tests cover application behavior without requiring a live Amazon Bedrock inv
 
 The project test suite has passed locally, with **15 tests passing**.
 
-## AWS Bedrock Integration
+
+### AWS Bedrock Integration
+
 
 The application uses Amazon Bedrock Converse to process extracted invoice text and return structured invoice information.
 
@@ -263,7 +275,9 @@ The project was tested with Amazon Bedrock using configured AWS credentials. The
 
 For a production deployment, an EC2 IAM role should be used instead of mounting local credentials. The required Bedrock permissions and inference profile access must be verified before deployment.
 
-## Infrastructure as Code
+
+### Infrastructure as Code
+
 
 The `terraform/` directory contains infrastructure configuration for a planned AWS deployment.
 
@@ -280,13 +294,15 @@ Terraform formatting and validation are included in the CI workflow.
 
 **Deployment status:** The Terraform configuration has been formatted and validated locally and through CI. AWS infrastructure has not been provisioned by this project. No Terraform apply has been performed.
 
-## Continuous Integration
+
+### Continuous Integration
+
 
 GitHub Actions runs automated checks when changes are pushed to the repository or pull requests target the `main` branch.
 
 The workflow includes two jobs:
 
-### Python tests
+#### Python tests
 
 - Sets up Python 3.12.
 - Installs project dependencies.
@@ -294,7 +310,7 @@ The workflow includes two jobs:
 - Uses a test database and placeholder configuration.
 - Does not invoke Amazon Bedrock or require AWS credentials.
 
-### Terraform validation
+#### Terraform validation
 
 - Sets up Terraform.
 - Checks formatting using `terraform fmt -check -recursive`.
@@ -303,7 +319,9 @@ The workflow includes two jobs:
 
 The workflow does not run `terraform plan` or `terraform apply`, and it does not provision AWS resources.
 
-## Security Considerations
+
+### Security Considerations
+
 
 - PDF uploads are checked before processing.
 - File size is limited to 10 MB.
@@ -313,7 +331,9 @@ The workflow does not run `terraform plan` or `terraform apply`, and it does not
 - Production AWS access should use IAM roles rather than long-lived local credentials.
 - Human review is required for invoices flagged for review.
 
-## Current Limitations
+
+### Current Limitations
+
 
 - Invoice extraction depends on the quality and readability of the uploaded PDF.
 - AI-extracted information requires validation.
@@ -322,7 +342,9 @@ The workflow does not run `terraform plan` or `terraform apply`, and it does not
 - AWS deployment has not yet been performed.
 - Production IAM permissions and Bedrock inference profile access still require deployment verification.
 
-## Project Status
+
+### Project Status
+
 
 The project has been tested locally and through Docker Compose.
 
@@ -345,6 +367,12 @@ The Docker Compose end-to-end test successfully uploaded an invoice, processed a
 
 **AWS infrastructure deployment remains pending.**
 
-## Repository
+
+### Repository
+
 
 GitHub: https://github.com/umararshad0/ai-invoice-processor
+
+## Author
+
+**Umar Arshad** · [GitHub](https://github.com/umararshad0)
