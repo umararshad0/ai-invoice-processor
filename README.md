@@ -4,28 +4,6 @@ An AI-powered invoice processing API built with **FastAPI, Amazon Bedrock, Postg
 
 This project demonstrates backend API development, AI integration, database persistence, automated testing, containerization, infrastructure as code, and CI/CD practices.
 
-## Screenshots
-
-![AI Invoice Processor architecture diagram](docs/screenshots/ai-invoice-processor-architecture.png)
-
-### API documentation
-![API documentation](docs/screenshots/api-documentation.png)
-
-### Invoice list
-![Invoice list](docs/screenshots/invoice-list.png)
-
-### Invoice details
-![Invoice list with details](docs/screenshots/invoice-list-details.png)
-
-### Duplicate detection
-![Duplicate detection](docs/screenshots/duplicate-detection.png)
-
-### Human review workflow
-![Human review workflow](docs/screenshots/human-review-workflow.png)
-
-### CI pipeline passing
-![GitHub Actions passing](docs/screenshots/github-actions-passing.png)
-
 ## Features
 
 - **PDF invoice upload:** Accepts PDF files through a REST API.
