@@ -6,6 +6,7 @@ services:
     ports:
       - "8001:8000"
     environment:
+      API_KEY: ${API_KEY:?Set API_KEY in .env}
       DATABASE_URL: postgresql+psycopg://invoice_user:local_dev_password@db:5432/invoice_db
       BEDROCK_MODEL_ID: ${BEDROCK_MODEL_ID}
       AWS_REGION: ${AWS_REGION}

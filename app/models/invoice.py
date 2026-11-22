@@ -32,6 +32,7 @@ class Invoice(Base):
     )
 
     source_filename = Column(String(255), nullable=False)
+    stored_filename = Column(String(255), nullable=True)
 
     uploaded_at = Column(
         DateTime(timezone=True),

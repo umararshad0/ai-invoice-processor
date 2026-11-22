@@ -1,10 +1,12 @@
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
+from typing import Literal
 from uuid import uuid4
 
-
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from fastapi.responses import FileResponse
+from pydantic import BaseModel
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -15,7 +17,14 @@ from app.models.invoice import Invoice
 from app.services.pdf_extractor import extract_pdf_text
 from app.services.bedrock_service import extract_invoice_data
 from app.services.invoice_validator import validate_invoice_data
-router = APIRouter(prefix="/invoices", tags=["Invoices"])
+from app.schemas.invoice import InvoiceCorrection
+from app.security import require_api_key
+
+router = APIRouter(
+    prefix="/invoices",
+    tags=["Invoices"],
+    dependencies=[Depends(require_api_key)],
+)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 UPLOAD_DIR = PROJECT_ROOT / "uploads"
@@ -123,6 +132,7 @@ async def upload_invoice(
         )
 
     # 6. Convert extracted values
+    saved_filename = f"{uuid4().hex}.pdf"
     try:
         invoice_date = (
             date.fromisoformat(invoice_data["invoice_date"])
@@ -150,7 +160,8 @@ async def upload_invoice(
             total_amount=to_decimal(invoice_data.get("total_amount")),
             currency=invoice_data.get("currency"),
             status=status,
-            source_filename=file.filename
+            source_filename=file.filename,
+            stored_filename=saved_filename,
         )
 
     except (ValueError, TypeError, ArithmeticError) as exc:
@@ -162,7 +173,6 @@ async def upload_invoice(
     # 7. Save the PDF and database record
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
-    saved_filename = f"{uuid4().hex}.pdf"
     saved_path = UPLOAD_DIR / saved_filename
 
     saved_path.write_bytes(file_content)
@@ -218,10 +228,6 @@ async def upload_invoice(
     }
 
 
-from pydantic import BaseModel
-from typing import Literal
-
-
 class ReviewRequest(BaseModel):
     action: Literal["approve", "reject"]
 
@@ -263,15 +269,24 @@ def invoice_to_dict(invoice: Invoice):
 
 
 @router.get("/")
-def list_invoices(db: Session = Depends(get_db)):
+def list_invoices(
+    db: Session = Depends(get_db),
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=50, ge=1, le=100),
+):
+    total = db.query(func.count(Invoice.id)).scalar() or 0
     invoices = (
         db.query(Invoice)
         .order_by(Invoice.id.desc())
+        .offset(offset)
+        .limit(limit)
         .all()
     )
 
     return {
-        "count": len(invoices),
+        "count": total,
+        "offset": offset,
+        "limit": limit,
         "invoices": [invoice_to_dict(invoice) for invoice in invoices]
     }
 
@@ -292,6 +307,91 @@ def get_invoice(
         )
 
     return invoice_to_dict(invoice)
+
+
+@router.get("/{invoice_id}/file")
+def get_invoice_file(
+    invoice_id: int,
+    db: Session = Depends(get_db),
+):
+    invoice = db.query(Invoice).filter(Invoice.id == invoice_id).first()
+    if invoice is None:
+        raise HTTPException(status_code=404, detail="Invoice not found.")
+
+    if not invoice.stored_filename:
+        raise HTTPException(status_code=404, detail="Invoice file is unavailable.")
+
+    file_path = UPLOAD_DIR / invoice.stored_filename
+    if not file_path.is_file():
+        raise HTTPException(status_code=404, detail="Invoice file is unavailable.")
+
+    return FileResponse(
+        file_path,
+        media_type="application/pdf",
+        filename=invoice.source_filename,
+    )
+
+
+@router.patch("/{invoice_id}")
+def correct_invoice(
+    invoice_id: int,
+    correction: InvoiceCorrection,
+    db: Session = Depends(get_db),
+):
+    invoice = db.query(Invoice).filter(Invoice.id == invoice_id).first()
+    if invoice is None:
+        raise HTTPException(status_code=404, detail="Invoice not found.")
+    if invoice.status != "needs_review":
+        raise HTTPException(
+            status_code=409,
+            detail="Only invoices that need review can be corrected.",
+        )
+
+    updates = correction.model_dump(exclude_unset=True)
+    if not updates:
+        raise HTTPException(status_code=400, detail="No corrections were supplied.")
+
+    for field, value in updates.items():
+        setattr(invoice, field, value)
+
+    validation = validate_invoice_data({
+        "invoice_number": invoice.invoice_number,
+        "supplier_name": invoice.supplier_name,
+        "invoice_date": invoice.invoice_date.isoformat() if invoice.invoice_date else None,
+        "due_date": invoice.due_date.isoformat() if invoice.due_date else None,
+        "subtotal": invoice.subtotal,
+        "tax_amount": invoice.tax_amount,
+        "total_amount": invoice.total_amount,
+        "currency": invoice.currency,
+    })
+    if not validation["valid"]:
+        db.rollback()
+        raise HTTPException(
+            status_code=422,
+            detail={"message": "Corrections are still invalid.", "errors": validation["errors"]},
+        )
+
+    possible_duplicate = (
+        db.query(Invoice)
+        .filter(
+            Invoice.id != invoice.id,
+            func.lower(func.trim(Invoice.invoice_number))
+            == invoice.invoice_number.strip().lower(),
+            func.lower(func.trim(Invoice.supplier_name))
+            == invoice.supplier_name.strip().lower(),
+        )
+        .order_by(Invoice.id.asc())
+        .first()
+    )
+    invoice.duplicate_of_invoice_id = possible_duplicate.id if possible_duplicate else None
+    invoice.status = "needs_review" if possible_duplicate else "pending_review"
+    db.commit()
+    db.refresh(invoice)
+    return {
+        "message": "Invoice corrected and returned to review.",
+        "duplicate": possible_duplicate is not None,
+        "invoice": invoice_to_dict(invoice),
+    }
 
 
 @router.post("/{invoice_id}/review")

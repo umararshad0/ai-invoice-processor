@@ -19,6 +19,7 @@ jobs:
 
     env:
       DATABASE_URL: sqlite:///./ci.db
+      API_KEY: ci-placeholder-key-for-tests-only
       BEDROCK_MODEL_ID: ci-placeholder-model
       AWS_REGION: eu-north-1
 

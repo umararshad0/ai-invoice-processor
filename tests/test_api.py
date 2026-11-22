@@ -9,11 +9,13 @@ from sqlalchemy.pool import StaticPool
 from app.main import app
 from app.database import Base, get_db
 from app.models.invoice import Invoice
+from app.config import settings
 import app.api.invoices as invoice_api
 
 
 # Create an isolated in-memory SQLite database for tests.
 TEST_DATABASE_URL = "sqlite://"
+TEST_API_KEY = "test-only-key-for-invoice-api"
 
 engine = create_engine(
     TEST_DATABASE_URL,
@@ -30,6 +32,7 @@ TestingSessionLocal = sessionmaker(
 
 @pytest.fixture
 def client(tmp_path, monkeypatch):
+    monkeypatch.setattr(settings, "api_key", TEST_API_KEY)
     Base.metadata.create_all(bind=engine)
 
     def override_get_db():
@@ -66,7 +69,7 @@ def client(tmp_path, monkeypatch):
         }
     )
 
-    with TestClient(app) as test_client:
+    with TestClient(app, headers={"X-API-Key": TEST_API_KEY}) as test_client:
         yield test_client
 
     app.dependency_overrides.clear()

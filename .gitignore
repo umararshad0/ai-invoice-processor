@@ -1,11 +1,13 @@
 .env
 .env.*
 !.env.example
+.DS_Store
 venv/
 __pycache__/
 *.py[cod]
 .pytest_cache/
 uploads/
+test pdf.pdf
 
 # Generated test invoices
 test-data/*.pdf

@@ -36,6 +36,10 @@ This project demonstrates backend API development, AI integration, database pers
 - **Duplicate detection:** Identifies potential duplicate invoices and flags them for review.
 - **PostgreSQL persistence:** Stores invoice records in a relational database using SQLAlchemy.
 - **Human review:** Supports approval and rejection of invoices.
+- **API access control:** Requires `X-API-Key` for invoice data and actions; authentication fails closed when no key is configured.
+- **Correction workflow:** Allows valid corrections to return flagged invoices to review.
+- **PDF retrieval:** Stores the generated upload name with each invoice and exposes an authenticated file endpoint.
+- **Paginated listing:** Bounds invoice list responses with `offset` and `limit`.
 - **Review protection:** Prevents approval when an invoice requires review.
 - **REST API documentation:** Provides interactive API documentation through FastAPI.
 - **Automated tests:** Uses pytest with an isolated SQLite test database and mocked external dependencies.
@@ -130,7 +134,11 @@ Successful GitHub Actions workflow run.
 | POST | `/invoices/upload` | Upload and process a PDF invoice |
 | GET | `/invoices/` | Retrieve invoice records |
 | GET | `/invoices/{invoice_id}` | Retrieve an individual invoice |
+| GET | `/invoices/{invoice_id}/file` | Retrieve the stored PDF |
+| PATCH | `/invoices/{invoice_id}` | Correct an invoice that needs review |
 | POST | `/invoices/{invoice_id}/review` | Approve or reject an invoice |
+
+All `/invoices` routes require an `X-API-Key` header. `/health` remains public. The invoice list accepts `offset` and `limit` (maximum 100). Valid corrections return the invoice to `pending_review`.
 
 ### Interactive API documentation
 
@@ -177,7 +185,7 @@ Create your local environment configuration using the project's example configur
 cp .env.example .env
 ```
 
-Update the values in `.env` to match your local database and AWS configuration. Keep real credentials and secrets out of Git.
+Set a long random `API_KEY` (for example, generate one with `openssl rand -hex 32`) and update the database and AWS settings. Keep real credentials and secrets out of Git. Invoice PDFs can contain sensitive financial and personal data; use synthetic samples for demos and define a retention and deletion policy before processing real invoices.
 
 ### Run database migrations
 

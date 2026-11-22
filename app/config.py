@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     environment: str = "development"
 
     database_url: str
+    api_key: str | None = None
 
     bedrock_model_id: str
     aws_region: str = "eu-north-1"
