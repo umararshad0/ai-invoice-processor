@@ -2,7 +2,7 @@ fastapi==0.165.0
 uvicorn[standard]==0.54.0
 python-multipart==0.0.33
 SQLAlchemy==2.1.9
-psycopg[binary]==3.3.6
+psycopg[binary]==3.3.9
 pydantic-settings==2.16.2
 boto3==1.44.9
 pypdf==7.1.1
